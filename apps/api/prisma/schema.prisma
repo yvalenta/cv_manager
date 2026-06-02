@@ -1,0 +1,164 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")  // Required by Supabase for migrations
+}
+
+// ─── MAIN PROFILE ──────────────────────────────────────────────────────────
+
+model CvProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id")
+
+  // Personal information
+  fullName       String?  @map("full_name")
+  jobTitle       String?  @map("job_title")
+  email          String?
+  phone          String?
+  linkedIn       String?  @map("linked_in")
+  location       String?
+  website        String?
+
+  // Professional summary
+  careerSummary  String?  @map("career_summary")  @db.Text
+
+  // Version control
+  cvVersion      Int      @default(1) @map("cv_version")
+  lastExportedAt DateTime? @map("last_exported_at")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  languages      ProfileLanguage[]
+  experiences    WorkExperience[]
+  education      Education[]
+  skills         CvSkill[]
+
+  @@map("cv_profiles")
+}
+
+// ─── LANGUAGES ───────────────────────────────────────────────────────────────
+
+model ProfileLanguage {
+  id        String        @id @default(cuid())
+  profileId String        @map("profile_id")
+  name      String                             // "English", "Spanish"
+  level     LanguageLevel                      // CEFR Enum
+  sortOrder Int           @default(0) @map("sort_order")
+
+  profile   CvProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("profile_languages")
+}
+
+enum LanguageLevel {
+  A1
+  A2
+  B1
+  B2
+  C1
+  C2
+  NATIVE
+}
+
+// ─── WORK EXPERIENCE ───────────────────────────────────────────────────
+
+model WorkExperience {
+  id           String   @id @default(cuid())
+  profileId    String   @map("profile_id")
+
+  role         String                           // "Sr. Ruby Developer"
+  company      String                           // "Globant"
+  client       String?                          // "Panorama Education" (project client)
+  department   String?                          // "AI Studio"
+  country      String?
+  location     String?                          // "Medellín (remote)"
+
+  // Dates as strings for format flexibility
+  startDate    String?  @map("start_date")      // "Aug 2025"
+  endDate      String?  @map("end_date")        // "Jan 2026" | null if current
+  isCurrent    Boolean  @default(false) @map("is_current")
+  displayDates String?  @map("display_dates")   // "Aug 2025 - Present" (computed)
+
+  achievements String?  @db.Text               // Achievements and responsibilities
+  sortOrder    Int      @default(0) @map("sort_order")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  profile      CvProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  tools        ExperienceTool[]
+
+  @@map("work_experiences")
+}
+
+// ─── EXPERIENCE TOOLS / TECHNOLOGIES ───────────────────────────────────────
+
+model ExperienceTool {
+  id           String         @id @default(cuid())
+  experienceId String         @map("experience_id")
+  name         String                               // "Ruby on Rails", "LangChain"
+  sortOrder    Int            @default(0) @map("sort_order")
+
+  experience   WorkExperience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@map("experience_tools")
+}
+
+// ─── EDUCATION ─────────────────────────────────────────────────────────────
+
+model Education {
+  id           String    @id @default(cuid())
+  profileId    String    @map("profile_id")
+
+  degree       String                          // "Ing. de Sistemas", "MBA"
+  institution  String                          // "Universidad Católica del Norte"
+  country      String?
+
+  startYear    String?   @map("start_year")    // "2015"
+  endYear      String?   @map("end_year")      // "2017" | null if ongoing
+  isOngoing    Boolean   @default(false) @map("is_ongoing")
+  displayDates String?   @map("display_dates") // "2015 - 2017"
+
+  specialty    String?                         // "Especialidad en Redes"
+  gpa          String?                         // "4.2/5.0" (optional)
+  honors       String?                         // "Cum Laude" (optional)
+
+  sortOrder    Int       @default(0) @map("sort_order")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  profile      CvProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("education")
+}
+
+// ─── GLOBAL SKILLS ───────────────────────────────────────────────────────
+
+model CvSkill {
+  id           String        @id @default(cuid())
+  profileId    String        @map("profile_id")
+
+  name         String                            // "Ruby on Rails"
+  category     SkillCategory @default(TECHNICAL)
+  yearsExp     Int?          @map("years_exp")   // Years of experience
+  sortOrder    Int           @default(0) @map("sort_order")
+
+  profile      CvProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("cv_skills")
+}
+
+enum SkillCategory {
+  TECHNICAL     // Languages, frameworks, databases
+  SOFT          // Communication, leadership, etc.
+  TOOL          // IDEs, dev tools
+  OTHER
+}
