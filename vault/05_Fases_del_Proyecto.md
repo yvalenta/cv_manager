@@ -197,7 +197,7 @@ jobs:
 ```
 
 ### Checklist Fase 1
-- [ ] Monorepo inicializado con pnpm workspaces
+- [x] Monorepo inicializado con pnpm workspaces
 - [ ] `apps/web` con Vite + React + TypeScript + Tailwind + shadcn/ui
 - [ ] `apps/api` con Express + TypeScript + Prisma inicializado
 - [ ] `packages/shared` con tipos y schemas base
